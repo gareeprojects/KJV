@@ -27,6 +27,10 @@
   --ribbon:#6B1F2A;
   --rule:#E3DFD4;
   --mark:#F2E3A8;
+  --hl-gold:#F4E5A6;
+  --hl-green:#CDE7C7;
+  --hl-blue:#CEE0F4;
+  --hl-rose:#F5D3DB;
   --shadow:0 1px 2px rgba(27,27,31,.06), 0 8px 24px rgba(27,27,31,.05);
   --scale:1;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
@@ -41,6 +45,10 @@ html[data-theme="dark"]{
   --ribbon:#93303B;
   --rule:#2A2E35;
   --mark:#4A421E;
+  --hl-gold:#4E4520;
+  --hl-green:#22402A;
+  --hl-blue:#1F3450;
+  --hl-rose:#48252D;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
@@ -153,7 +161,37 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
   font-family:var(--sans);font-size:calc(10.5px * var(--scale));font-weight:700;color:var(--brass);
   vertical-align:.42em;margin-right:5px;letter-spacing:.02em
 }
-.v.sel{background:color-mix(in srgb,var(--brass) 15%,transparent)}
+.v.hl-gold{background:var(--hl-gold)}
+.v.hl-green{background:var(--hl-green)}
+.v.hl-blue{background:var(--hl-blue)}
+.v.hl-rose{background:var(--hl-rose)}
+.v.sel{box-shadow:inset 0 0 0 2px var(--brass)}
+.bmk{width:8px;height:11px;fill:var(--ribbon);stroke:none;margin-right:4px;vertical-align:.32em}
+
+/* saved lists */
+.savedrow{display:flex;gap:8px;margin:0 0 24px}
+.savedbtn{
+  flex:1;display:flex;align-items:center;gap:8px;padding:12px 14px;border:1px solid var(--rule);
+  border-radius:11px;background:var(--card);box-shadow:var(--shadow);font-size:14px;text-align:left
+}
+.savedbtn:hover{border-color:var(--brass)}
+.savedbtn .cnt{
+  font-family:var(--serif);font-size:19px;font-weight:700;color:var(--brass);
+  font-variant-numeric:tabular-nums;min-width:1ch
+}
+.srow{display:flex;align-items:flex-start;gap:6px;border-bottom:1px solid var(--rule)}
+.srow .hit{border-bottom:0;flex:1;min-width:0}
+.rm{flex:none;color:var(--muted);padding:14px 8px;font-size:17px;line-height:1}
+.rm:hover{color:var(--ribbon)}
+.swatchdot{
+  display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:.5px
+}
+.backup{display:flex;gap:8px;margin-top:24px;padding-top:18px;border-top:1px solid var(--rule)}
+.backup button{
+  flex:1;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--card);
+  font-size:13px;color:var(--muted)
+}
+.backup button:hover{color:var(--brass);border-color:var(--brass)}
 .v.flash{animation:flash 1.9s ease-out}
 @keyframes flash{0%,45%{background:color-mix(in srgb,var(--brass) 26%,transparent)}100%{background:transparent}}
 
@@ -177,7 +215,19 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
   visibility:hidden;opacity:0;pointer-events:none
 }
 .actions.on{transform:translateX(-50%) translateY(0);visibility:visible;opacity:1;pointer-events:auto}
-.actions button{padding:8px 13px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+.actions{flex-direction:column;gap:6px;padding:8px}
+.swatches{display:flex;gap:6px;align-items:center;justify-content:center}
+.swatches button{
+  width:30px;height:30px;border-radius:50%;padding:0;border:1px solid var(--rule);
+  display:grid;place-items:center;font-size:14px;color:var(--muted)
+}
+.swatches button[data-hl="gold"]{background:var(--hl-gold)}
+.swatches button[data-hl="green"]{background:var(--hl-green)}
+.swatches button[data-hl="blue"]{background:var(--hl-blue)}
+.swatches button[data-hl="rose"]{background:var(--hl-rose)}
+.swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--brass);border-color:transparent}
+.actrow{display:flex;gap:2px;justify-content:center;flex-wrap:wrap}
+.actions button{padding:8px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap}
 .actions button:hover{background:color-mix(in srgb,var(--brass) 12%,transparent);color:var(--brass)}
 
 /* ---------- index and chapter picker ---------- */
@@ -257,9 +307,19 @@ html[data-theme="dark"] .cell.cur{color:#14161A}
 </main>
 
 <div class="actions" id="actions">
-  <button id="copyVerse">Copy verse</button>
-  <button id="copyRef">Copy with reference</button>
-  <button id="closeAct">Done</button>
+  <div class="swatches" id="swatches">
+    <button data-hl="gold" aria-label="Highlight gold" aria-pressed="false"></button>
+    <button data-hl="green" aria-label="Highlight green" aria-pressed="false"></button>
+    <button data-hl="blue" aria-label="Highlight blue" aria-pressed="false"></button>
+    <button data-hl="rose" aria-label="Highlight rose" aria-pressed="false"></button>
+    <button data-hl="none" aria-label="Remove highlight" aria-pressed="false">&times;</button>
+  </div>
+  <div class="actrow">
+    <button id="bmkBtn">Bookmark</button>
+    <button id="copyVerse">Copy</button>
+    <button id="copyRef">Copy + ref</button>
+    <button id="closeAct">Done</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -277,6 +337,36 @@ var store={
 };
 
 var BOOKS=[], NAMES=[], LOWER=null, ready=false;
+
+/* marks: { "42.3.16": {h:"gold", b:1} } one entry per verse */
+var marks={};
+try{ marks=JSON.parse(store.get("marks")||"{}")||{}; }catch(e){ marks={}; }
+function saveMarks(){ try{ store.set("marks",JSON.stringify(marks)); }catch(e){} }
+function keyOf(b,c,v){ return b+"."+c+"."+v; }
+function markAt(b,c,v){ return marks[keyOf(b,c,v)]||null; }
+function countMarks(kind){
+  var n=0;
+  for(var k in marks){ if(marks.hasOwnProperty(k) && (kind==="b"?marks[k].b:marks[k].h)) n++; }
+  return n;
+}
+function markList(kind){
+  var out=[];
+  for(var k in marks){
+    if(!marks.hasOwnProperty(k)) continue;
+    if(kind==="b" ? !marks[k].b : !marks[k].h) continue;
+    var p=k.split("."), b=+p[0], c=+p[1], v=+p[2];
+    if(!BOOKS[b]||!BOOKS[b][c-1]||!BOOKS[b][c-1][v-1]) continue;
+    out.push({k:k,b:b,c:c,v:v,h:marks[k].h});
+  }
+  out.sort(function(x,y){ return (x.b-y.b)||(x.c-y.c)||(x.v-y.v); });
+  return out;
+}
+function setMark(b,c,v,field,val){
+  var k=keyOf(b,c,v), m=marks[k]||{};
+  if(val) m[field]=val; else delete m[field];
+  if(m.h||m.b) marks[k]=m; else delete marks[k];
+  saveMarks();
+}
 var state={ book:42, chap:3, scope:"all", matchCase:false, wholeWord:false, mode:"index",
             results:[], shown:0, selected:null };
 
@@ -494,7 +584,9 @@ function renderChapter(b,c,focusVerse){
       ' &middot; '+BOOKS[b].length+' chapter'+(BOOKS[b].length>1?"s":"")+'</div></div></div>'+
       '<div class="verses">';
   for(var i=0;i<verses.length;i++){
-    html+='<span class="v" id="v'+(i+1)+'" data-v="'+(i+1)+'" tabindex="0">'+
+    var mk=markAt(b,c,i+1);
+    html+='<span class="v'+(mk&&mk.h?" hl-"+mk.h:"")+'" id="v'+(i+1)+'" data-v="'+(i+1)+'" tabindex="0">'+
+          (mk&&mk.b?'<svg class="bmk" viewBox="0 0 10 14"><path d="M1 1h8v12l-4-3-4 3z"/></svg>':'')+
           '<span class="n">'+(i+1)+'</span>'+esc(verses[i])+'</span> ';
   }
   html+='</div><div class="navrow">'+
@@ -514,6 +606,10 @@ function renderIndex(){
   state.mode="index"; state.selected=null; hideActions();
   var html='<div class="indexhead"><h1>The Holy Bible</h1>'+
            '<p>Authorized King James Version &middot; 66 books &middot; 1,189 chapters</p></div>';
+  html+='<div class="savedrow">'+
+    '<button class="savedbtn" data-open="bookmarks"><span class="cnt">'+countMarks("b")+'</span> Bookmarks</button>'+
+    '<button class="savedbtn" data-open="highlights"><span class="cnt">'+countMarks("h")+'</span> Highlights</button>'+
+    '</div>';
   html+='<div class="grouplabel">Old Testament</div><div class="grid">';
   for(var i=0;i<66;i++){
     if(i===39) html+='</div><div class="grouplabel">New Testament</div><div class="grid">';
@@ -535,6 +631,32 @@ function renderChapters(b){
   main.innerHTML=html+'</div>';
   window.scrollTo(0,0);
   setHash(encodeURIComponent(NAMES[b]),true);
+}
+function renderSaved(kind){
+  state.mode="saved"; state.selected=null; hideActions();
+  var isB=(kind==="b"), list=markList(kind);
+  var html='<div class="crumbs"><button class="crumb" data-nav="books">Books</button>'+
+    '<span class="crumbsep">&rsaquo;</span><span class="crumb" style="color:var(--ink)">'+
+    (isB?"Bookmarks":"Highlights")+'</span></div>'+
+    '<div class="indexhead"><h1>'+(isB?"Bookmarks":"Highlights")+'</h1>'+
+    '<p>'+(list.length?list.length+(list.length===1?" verse":" verses"):"Nothing saved yet")+'</p></div>';
+  if(!list.length){
+    html+='<div class="empty"><b>'+(isB?"No bookmarks yet":"No highlights yet")+'</b>'+
+      'Open any chapter, tap a verse, then use '+(isB?"Bookmark":"a colour")+' in the bar that appears.</div>';
+  } else {
+    for(var i=0;i<list.length;i++){
+      var r=list[i], t=BOOKS[r.b][r.c-1][r.v-1];
+      html+='<div class="srow"><button class="hit" data-b="'+r.b+'" data-c="'+r.c+'" data-v="'+r.v+'">'+
+        '<div class="ref">'+(r.h?'<span class="swatchdot" style="background:var(--hl-'+r.h+')"></span>':'')+
+        esc(refOf(r.b,r.c,r.v))+'</div><p>'+esc(t)+'</p></button>'+
+        '<button class="rm" data-rm="'+r.k+'" data-kind="'+kind+'" aria-label="Remove">&times;</button></div>';
+    }
+    html+='<div class="backup"><button data-backup="copy">Copy backup</button>'+
+          '<button data-backup="restore">Restore backup</button></div>';
+  }
+  main.innerHTML=html;
+  window.scrollTo(0,0);
+  setHash(isB?"bookmarks":"highlights",true);
 }
 function prevOf(b,c){ if(c>1) return [b,c-1]; if(b>0) return [b-1,BOOKS[b-1].length]; return null; }
 function nextOf(b,c){ if(c<BOOKS[b].length) return [b,c+1]; if(b<65) return [b+1,1]; return null; }
@@ -580,6 +702,20 @@ function go(b,c,v){
   renderChapter(b,c,v);
   setHash(encodeURIComponent(NAMES[b])+"."+c+(v?"."+v:""),true);
 }
+function doBackup(which){
+  if(which==="copy"){
+    copy(JSON.stringify(marks));
+    toast("Backup copied");
+    return;
+  }
+  var txt=window.prompt("Paste a backup to restore. This replaces what is saved now.");
+  if(!txt) return;
+  try{
+    var obj=JSON.parse(txt);
+    if(typeof obj!=="object"||!obj) throw 0;
+    marks=obj; saveMarks(); toast("Backup restored"); goIndex();
+  }catch(e){ toast("That backup could not be read"); }
+}
 function goIndex(){ clearQ(); renderIndex(); setHash("books",true); }
 
 /* ---------- interactions ---------- */
@@ -589,6 +725,17 @@ main.addEventListener("click",function(e){
     if(nav.dataset.nav==="books") goIndex(); else renderChapters(state.book);
     return;
   }
+  var open=e.target.closest("[data-open]");
+  if(open){ renderSaved(open.dataset.open==="bookmarks"?"b":"h"); return; }
+  var rm=e.target.closest("[data-rm]");
+  if(rm){
+    var k=rm.dataset.rm, kind=rm.dataset.kind, m=marks[k];
+    if(m){ if(kind==="b") delete m.b; else delete m.h; if(!m.h&&!m.b) delete marks[k]; saveMarks(); }
+    renderSaved(kind);
+    return;
+  }
+  var bu=e.target.closest("[data-backup]");
+  if(bu){ doBackup(bu.dataset.backup); return; }
   var cell=e.target.closest(".cell");
   if(cell){
     if(cell.dataset.c===undefined) renderChapters(+cell.dataset.b);
@@ -607,8 +754,45 @@ function selectVerse(el){
   var prev=main.querySelector(".v.sel"); if(prev) prev.classList.remove("sel");
   if(state.selected===+el.dataset.v){ state.selected=null; hideActions(); return; }
   el.classList.add("sel"); state.selected=+el.dataset.v;
+  syncActions();
   $("actions").classList.add("on");
 }
+function syncActions(){
+  var mk=state.selected?markAt(state.book,state.chap,state.selected):null;
+  var sw=$("swatches").children;
+  for(var i=0;i<sw.length;i++){
+    var c=sw[i].getAttribute("data-hl");
+    sw[i].setAttribute("aria-pressed", (mk&&mk.h===c)?"true":"false");
+  }
+  $("bmkBtn").textContent = (mk&&mk.b) ? "Bookmarked" : "Bookmark";
+  $("bmkBtn").style.color = (mk&&mk.b) ? "var(--ribbon)" : "";
+}
+function applyMarkToDom(){
+  var el=$("v"+state.selected); if(!el) return;
+  var mk=markAt(state.book,state.chap,state.selected);
+  el.className="v"+(mk&&mk.h?" hl-"+mk.h:"")+" sel";
+  var g=el.querySelector(".bmk"); if(g) g.remove();
+  if(mk&&mk.b){
+    el.insertAdjacentHTML("afterbegin",
+      '<svg class="bmk" viewBox="0 0 10 14"><path d="M1 1h8v12l-4-3-4 3z"/></svg>');
+  }
+  syncActions();
+}
+$("swatches").addEventListener("click",function(e){
+  var btn=e.target.closest("[data-hl]"); if(!btn||!state.selected) return;
+  var c=btn.getAttribute("data-hl");
+  var cur=markAt(state.book,state.chap,state.selected);
+  var next=(c==="none"||(cur&&cur.h===c)) ? null : c;
+  setMark(state.book,state.chap,state.selected,"h",next);
+  applyMarkToDom();
+});
+$("bmkBtn").onclick=function(){
+  if(!state.selected) return;
+  var cur=markAt(state.book,state.chap,state.selected);
+  setMark(state.book,state.chap,state.selected,"b",(cur&&cur.b)?null:1);
+  applyMarkToDom();
+  toast((markAt(state.book,state.chap,state.selected)||{}).b ? "Bookmarked" : "Bookmark removed");
+};
 function hideActions(){ $("actions").classList.remove("on"); }
 $("closeAct").onclick=function(){
   var prev=main.querySelector(".v.sel"); if(prev) prev.classList.remove("sel");
@@ -721,6 +905,8 @@ function fromHash(){
   var h=decodeURIComponent(location.hash.replace(/^#/,""));
   if(!h) return false;
   if(h==="books"){ renderIndex(); return true; }
+  if(h==="bookmarks"){ renderSaved("b"); return true; }
+  if(h==="highlights"){ renderSaved("h"); return true; }
   var p=h.split(".");
   var c=candidates(p[0]);
   if(!c.length) return false;

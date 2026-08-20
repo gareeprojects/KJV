@@ -1,5 +1,5 @@
 /* KJV Bible offline cache */
-var VERSION = "kjv-v4";
+var VERSION = "kjv-v5";
 var ASSETS = [
   "./",
   "./index.html",
