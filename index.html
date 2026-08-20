@@ -258,6 +258,20 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .cell.cur{background:var(--brass);border-color:var(--brass);color:#fff}
 html[data-theme="dark"] .cell.cur{color:#14161A}
 
+.chev{
+  position:fixed;top:50%;transform:translateY(-50%);z-index:50;
+  width:38px;height:52px;border-radius:12px;display:none;place-items:center;
+  background:color-mix(in srgb,var(--card) 82%,transparent);
+  border:1px solid var(--rule);color:var(--muted);
+  font-size:20px;line-height:1;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:var(--shadow);opacity:.55;transition:opacity .15s,color .15s,border-color .15s
+}
+.chev.on{display:grid}
+.chev:hover,.chev:active{opacity:1;color:var(--brass);border-color:var(--brass)}
+#chevPrev{left:max(6px,env(safe-area-inset-left,0))}
+#chevNext{right:max(6px,env(safe-area-inset-right,0))}
+@media (min-width:820px){ .chev{width:42px;height:58px;opacity:.4} }
+
 .toast{
   position:fixed;left:50%;transform:translateX(-50%) translateY(20px);
   bottom:calc(78px + env(safe-area-inset-bottom,0));z-index:90;
@@ -326,6 +340,9 @@ html[data-theme="dark"] .cell.cur{color:#14161A}
     <button id="closeAct">Done</button>
   </div>
 </div>
+
+<button class="chev" id="chevPrev" aria-label="Previous chapter">&lsaquo;</button>
+<button class="chev" id="chevNext" aria-label="Next chapter">&rsaquo;</button>
 
 <div class="toast" id="toast"></div>
 
@@ -606,6 +623,7 @@ function renderChapter(b,c,focusVerse){
     if(el){ el.scrollIntoView({block:"center",behavior:"auto"}); el.classList.add("flash"); }
   } else window.scrollTo(0,0);
   $("bookScope").textContent="In "+NAMES[b];
+  updateChevrons();
 }
 function renderIndex(){
   state.mode="index"; state.selected=[]; state.anchor=null; hideActions();
@@ -622,6 +640,7 @@ function renderIndex(){
   }
   main.innerHTML=html+'</div>';
   window.scrollTo(0,0);
+  updateChevrons();
 }
 function renderChapters(b){
   if(BOOKS[b].length===1){ go(b,1); return; }
@@ -635,6 +654,7 @@ function renderChapters(b){
   }
   main.innerHTML=html+'</div>';
   window.scrollTo(0,0);
+  updateChevrons();
   setHash(encodeURIComponent(NAMES[b]),true);
 }
 function renderSaved(kind){
@@ -661,7 +681,17 @@ function renderSaved(kind){
   }
   main.innerHTML=html;
   window.scrollTo(0,0);
+  updateChevrons();
   setHash(isB?"bookmarks":"highlights",true);
+}
+function updateChevrons(){
+  var reading=(state.mode==="read");
+  var p=reading?prevOf(state.book,state.chap):null;
+  var n=reading?nextOf(state.book,state.chap):null;
+  $("chevPrev").classList.toggle("on",!!p);
+  $("chevNext").classList.toggle("on",!!n);
+  if(p) $("chevPrev").setAttribute("aria-label","Previous chapter, "+labelOf(p));
+  if(n) $("chevNext").setAttribute("aria-label","Next chapter, "+labelOf(n));
 }
 function prevOf(b,c){ if(c>1) return [b,c-1]; if(b>0) return [b-1,BOOKS[b-1].length]; return null; }
 function nextOf(b,c){ if(c<BOOKS[b].length) return [b,c+1]; if(b<65) return [b+1,1]; return null; }
@@ -968,14 +998,39 @@ $("themeBtn").onclick=function(){
 $("booksBtn").onclick=goIndex;
 function clearQ(){ qEl.value=""; $("clearBtn").classList.remove("on"); $("opts").hidden=true; }
 
+/* chapter paging: side taps, swipes, arrow keys */
+function pageChapter(dir){
+  if(state.mode!=="read") return;
+  var t=dir<0?prevOf(state.book,state.chap):nextOf(state.book,state.chap);
+  if(t) go(t[0],t[1]);
+}
+$("chevPrev").onclick=function(){ pageChapter(-1); };
+$("chevNext").onclick=function(){ pageChapter(1); };
+
+var tx=0, ty=0, tracking=false;
+document.addEventListener("touchstart",function(e){
+  if(state.mode!=="read" || e.touches.length!==1){ tracking=false; return; }
+  var t=e.changedTouches[0];
+  // leave the screen edges to the system back gesture
+  if(t.clientX<28 || t.clientX>window.innerWidth-28){ tracking=false; return; }
+  tx=t.clientX; ty=t.clientY; tracking=true;
+},{passive:true});
+document.addEventListener("touchend",function(e){
+  if(!tracking) return;
+  tracking=false;
+  var t=e.changedTouches[0], dx=t.clientX-tx, dy=t.clientY-ty;
+  if(Math.abs(dx)<70 || Math.abs(dx)<Math.abs(dy)*2) return;
+  pageChapter(dx<0?1:-1);
+},{passive:true});
+
 /* keyboard */
 document.addEventListener("keydown",function(e){
   if(e.target===qEl) return;
   if(e.key==="/"){ e.preventDefault(); qEl.focus(); qEl.select(); return; }
   if(e.key==="Escape"){ hideActions(); return; }
   if(state.mode!=="read") return;
-  if(e.key==="ArrowRight"){ var n=nextOf(state.book,state.chap); if(n) go(n[0],n[1]); }
-  if(e.key==="ArrowLeft"){ var p=prevOf(state.book,state.chap); if(p) go(p[0],p[1]); }
+  if(e.key==="ArrowRight") pageChapter(1);
+  if(e.key==="ArrowLeft") pageChapter(-1);
 });
 
 /* hash routing */
