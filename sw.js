@@ -1,13 +1,16 @@
 /* KJV Bible offline cache */
-var VERSION = "kjv-v3";
+var VERSION = "kjv-v4";
 var ASSETS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./icon-180.png",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-512-maskable.png"
+  "./appicon-152.png",
+  "./appicon-167.png",
+  "./appicon-180.png",
+  "./appicon-192.png",
+  "./appicon-256.png",
+  "./appicon-512.png",
+  "./appicon-512-maskable.png"
 ];
 
 self.addEventListener("install", function (e) {

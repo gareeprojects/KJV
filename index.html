@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>KJV Bible</title>
 <meta name="theme-color" content="#F8F7F3">
+<meta name="description" content="The Authorized King James Version with reference lookup and full text search. Works offline.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="./appicon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="./appicon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="./appicon-152.png">
+<link rel="apple-touch-icon-precomposed" sizes="180x180" href="./appicon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./appicon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./appicon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KJV Bible">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{
   --paper:#F8F7F3;
@@ -735,6 +747,13 @@ function start(data){
   new Response(stream).text().then(function(txt){ start(JSON.parse(txt)); })
     .catch(function(){ main.innerHTML='<div class="empty"><b>The text did not load</b>Try reopening the file.</div>'; });
 })();
+
+/* offline support */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  });
+}
 })();
 </script>
 </body>
