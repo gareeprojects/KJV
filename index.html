@@ -227,6 +227,10 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .swatches button[data-hl="rose"]{background:var(--hl-rose)}
 .swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--brass);border-color:transparent}
 .actrow{display:flex;gap:2px;justify-content:center;flex-wrap:wrap}
+.selcount{
+  text-align:center;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--brass);font-weight:700;padding:1px 0 2px
+}
 .actions button{padding:8px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap}
 .actions button:hover{background:color-mix(in srgb,var(--brass) 12%,transparent);color:var(--brass)}
 
@@ -314,6 +318,7 @@ html[data-theme="dark"] .cell.cur{color:#14161A}
     <button data-hl="rose" aria-label="Highlight rose" aria-pressed="false"></button>
     <button data-hl="none" aria-label="Remove highlight" aria-pressed="false">&times;</button>
   </div>
+  <div class="selcount" id="selCount" style="display:none"></div>
   <div class="actrow">
     <button id="bmkBtn">Bookmark</button>
     <button id="copyVerse">Copy</button>
@@ -368,7 +373,7 @@ function setMark(b,c,v,field,val){
   saveMarks();
 }
 var state={ book:42, chap:3, scope:"all", matchCase:false, wholeWord:false, mode:"index",
-            results:[], shown:0, selected:null };
+            results:[], shown:0, selected:[], anchor:null };
 
 var $=function(id){ return document.getElementById(id); };
 var main=$("main"), qEl=$("q");
@@ -570,7 +575,7 @@ function highlight(text,terms){
 
 /* ---------- rendering ---------- */
 function renderChapter(b,c,focusVerse){
-  state.mode="read"; state.book=b; state.chap=c; state.selected=null;
+  state.mode="read"; state.book=b; state.chap=c; state.selected=[]; state.anchor=null;
   hideActions();
   var verses=BOOKS[b][c-1];
   var html='<div class="crumbs">'+
@@ -603,7 +608,7 @@ function renderChapter(b,c,focusVerse){
   $("bookScope").textContent="In "+NAMES[b];
 }
 function renderIndex(){
-  state.mode="index"; state.selected=null; hideActions();
+  state.mode="index"; state.selected=[]; state.anchor=null; hideActions();
   var html='<div class="indexhead"><h1>The Holy Bible</h1>'+
            '<p>Authorized King James Version &middot; 66 books &middot; 1,189 chapters</p></div>';
   html+='<div class="savedrow">'+
@@ -620,7 +625,7 @@ function renderIndex(){
 }
 function renderChapters(b){
   if(BOOKS[b].length===1){ go(b,1); return; }
-  state.mode="chapters"; state.selected=null; hideActions();
+  state.mode="chapters"; state.selected=[]; state.anchor=null; hideActions();
   var html='<div class="crumbs"><button class="crumb" data-nav="books">Books</button>'+
     '<span class="crumbsep">&rsaquo;</span><span class="crumb" style="color:var(--ink)">'+esc(NAMES[b])+'</span></div>'+
     '<div class="indexhead"><h1>'+esc(NAMES[b])+'</h1><p>'+(b<39?"Old Testament":"New Testament")+
@@ -633,7 +638,7 @@ function renderChapters(b){
   setHash(encodeURIComponent(NAMES[b]),true);
 }
 function renderSaved(kind){
-  state.mode="saved"; state.selected=null; hideActions();
+  state.mode="saved"; state.selected=[]; state.anchor=null; hideActions();
   var isB=(kind==="b"), list=markList(kind);
   var html='<div class="crumbs"><button class="crumb" data-nav="books">Books</button>'+
     '<span class="crumbsep">&rsaquo;</span><span class="crumb" style="color:var(--ink)">'+
@@ -745,67 +750,138 @@ main.addEventListener("click",function(e){
   var hit=e.target.closest(".hit");
   if(hit){ go(+hit.dataset.b,+hit.dataset.c,+hit.dataset.v); return; }
   var v=e.target.closest(".v");
-  if(v && state.mode==="read"){ selectVerse(v); }
+  if(v && state.mode==="read"){ selectVerse(v, e.shiftKey); }
 });
 main.addEventListener("keydown",function(e){
   if(e.key==="Enter" && e.target.classList && e.target.classList.contains("v")){ selectVerse(e.target); }
 });
-function selectVerse(el){
-  var prev=main.querySelector(".v.sel"); if(prev) prev.classList.remove("sel");
-  if(state.selected===+el.dataset.v){ state.selected=null; hideActions(); return; }
-  el.classList.add("sel"); state.selected=+el.dataset.v;
-  syncActions();
-  $("actions").classList.add("on");
+function selection(){ return state.selected.slice().sort(function(a,b){ return a-b; }); }
+function isSelected(v){ return state.selected.indexOf(v)!==-1; }
+function paintSelection(){
+  var all=main.querySelectorAll(".v");
+  for(var i=0;i<all.length;i++){
+    all[i].classList.toggle("sel", isSelected(+all[i].dataset.v));
+  }
+}
+function setSelection(list){
+  state.selected=list.slice();
+  paintSelection();
+  if(state.selected.length){ syncActions(); $("actions").classList.add("on"); }
+  else hideActions();
+}
+function selectVerse(el,extend){
+  var v=+el.dataset.v;
+  if(extend && state.anchor){
+    var lo=Math.min(state.anchor,v), hi=Math.max(state.anchor,v), r=[];
+    for(var i=lo;i<=hi;i++) r.push(i);
+    setSelection(r);
+    return;
+  }
+  if(isSelected(v)){
+    state.selected.splice(state.selected.indexOf(v),1);
+    if(state.anchor===v) state.anchor=state.selected.length?state.selected[state.selected.length-1]:null;
+  } else {
+    state.selected.push(v);
+    state.anchor=v;
+  }
+  setSelection(state.selected);
+}
+function clearSelection(){ state.anchor=null; setSelection([]); }
+
+/* the highlight shared by every selected verse, or null if they differ */
+function commonHighlight(){
+  var sel=selection(), first=null;
+  for(var i=0;i<sel.length;i++){
+    var mk=markAt(state.book,state.chap,sel[i]), h=mk&&mk.h||null;
+    if(i===0) first=h; else if(h!==first) return null;
+  }
+  return first;
+}
+function allBookmarked(){
+  var sel=selection();
+  if(!sel.length) return false;
+  for(var i=0;i<sel.length;i++){
+    var mk=markAt(state.book,state.chap,sel[i]);
+    if(!mk||!mk.b) return false;
+  }
+  return true;
 }
 function syncActions(){
-  var mk=state.selected?markAt(state.book,state.chap,state.selected):null;
+  var n=state.selected.length, h=commonHighlight(), bm=allBookmarked();
   var sw=$("swatches").children;
   for(var i=0;i<sw.length;i++){
     var c=sw[i].getAttribute("data-hl");
-    sw[i].setAttribute("aria-pressed", (mk&&mk.h===c)?"true":"false");
+    sw[i].setAttribute("aria-pressed", (h&&h===c)?"true":"false");
   }
-  $("bmkBtn").textContent = (mk&&mk.b) ? "Bookmarked" : "Bookmark";
-  $("bmkBtn").style.color = (mk&&mk.b) ? "var(--ribbon)" : "";
+  $("bmkBtn").textContent = bm ? "Bookmarked" : "Bookmark";
+  $("bmkBtn").style.color = bm ? "var(--ribbon)" : "";
+  $("selCount").textContent = n>1 ? n+" verses selected" : "";
+  $("selCount").style.display = n>1 ? "" : "none";
 }
-function applyMarkToDom(){
-  var el=$("v"+state.selected); if(!el) return;
-  var mk=markAt(state.book,state.chap,state.selected);
-  el.className="v"+(mk&&mk.h?" hl-"+mk.h:"")+" sel";
+function repaintVerse(v){
+  var el=$("v"+v); if(!el) return;
+  var mk=markAt(state.book,state.chap,v);
+  el.className="v"+(mk&&mk.h?" hl-"+mk.h:"")+(isSelected(v)?" sel":"");
   var g=el.querySelector(".bmk"); if(g) g.remove();
   if(mk&&mk.b){
     el.insertAdjacentHTML("afterbegin",
       '<svg class="bmk" viewBox="0 0 10 14"><path d="M1 1h8v12l-4-3-4 3z"/></svg>');
   }
-  syncActions();
 }
 $("swatches").addEventListener("click",function(e){
-  var btn=e.target.closest("[data-hl]"); if(!btn||!state.selected) return;
+  var btn=e.target.closest("[data-hl]"); if(!btn||!state.selected.length) return;
   var c=btn.getAttribute("data-hl");
-  var cur=markAt(state.book,state.chap,state.selected);
-  var next=(c==="none"||(cur&&cur.h===c)) ? null : c;
-  setMark(state.book,state.chap,state.selected,"h",next);
-  applyMarkToDom();
+  var next=(c==="none"||commonHighlight()===c) ? null : c;
+  var sel=selection();
+  for(var i=0;i<sel.length;i++){
+    setMark(state.book,state.chap,sel[i],"h",next);
+    repaintVerse(sel[i]);
+  }
+  syncActions();
+  if(sel.length>1) toast(next ? sel.length+" verses highlighted" : "Highlights removed");
 });
 $("bmkBtn").onclick=function(){
-  if(!state.selected) return;
-  var cur=markAt(state.book,state.chap,state.selected);
-  setMark(state.book,state.chap,state.selected,"b",(cur&&cur.b)?null:1);
-  applyMarkToDom();
-  toast((markAt(state.book,state.chap,state.selected)||{}).b ? "Bookmarked" : "Bookmark removed");
+  if(!state.selected.length) return;
+  var on=!allBookmarked(), sel=selection();
+  for(var i=0;i<sel.length;i++){
+    setMark(state.book,state.chap,sel[i],"b",on?1:null);
+    repaintVerse(sel[i]);
+  }
+  syncActions();
+  toast(on ? (sel.length>1 ? sel.length+" verses bookmarked" : "Bookmarked")
+           : (sel.length>1 ? "Bookmarks removed" : "Bookmark removed"));
 };
 function hideActions(){ $("actions").classList.remove("on"); }
-$("closeAct").onclick=function(){
-  var prev=main.querySelector(".v.sel"); if(prev) prev.classList.remove("sel");
-  state.selected=null; hideActions();
-};
+$("closeAct").onclick=clearSelection;
+
+/* "16-18" or "16-18, 21" from a list of verse numbers */
+function rangeLabel(sel){
+  var parts=[], i=0;
+  while(i<sel.length){
+    var a=sel[i], b=a;
+    while(i+1<sel.length && sel[i+1]===b+1){ b=sel[++i]; }
+    parts.push(a===b ? String(a) : a+"-"+b);
+    i++;
+  }
+  return parts.join(", ");
+}
+function selectedText(withNumbers){
+  var sel=selection(), ch=BOOKS[state.book][state.chap-1], out=[];
+  for(var i=0;i<sel.length;i++){
+    out.push((withNumbers?sel[i]+" ":"")+ch[sel[i]-1]);
+  }
+  return out.join(" ");
+}
 $("copyVerse").onclick=function(){
-  if(!state.selected) return;
-  copy(BOOKS[state.book][state.chap-1][state.selected-1]);
+  if(!state.selected.length) return;
+  var sel=selection();
+  copy(selectedText(sel.length>1));
 };
 $("copyRef").onclick=function(){
-  if(!state.selected) return;
-  copy('"'+BOOKS[state.book][state.chap-1][state.selected-1]+'" '+
-       refOf(state.book,state.chap,state.selected)+" (KJV)");
+  if(!state.selected.length) return;
+  var sel=selection();
+  copy('"'+selectedText(sel.length>1)+'" '+
+       NAMES[state.book]+" "+state.chap+":"+rangeLabel(sel)+" (KJV)");
 };
 
 var timer=null;
@@ -833,7 +909,10 @@ function handleQuery(raw,submitted){
     renderChapter(ref.b,ref.c,ref.v||0);
     setHash(encodeURIComponent(NAMES[ref.b])+"."+ref.c+(ref.v?"."+ref.v:""));
     if(ref.v2 && ref.v2>ref.v){
-      for(var i=ref.v;i<=ref.v2;i++){ var el=$("v"+i); if(el) el.classList.add("sel"); }
+      var r=[];
+      for(var i=ref.v;i<=ref.v2 && i<=BOOKS[ref.b][ref.c-1].length;i++) r.push(i);
+      state.anchor=ref.v;
+      setSelection(r);
     }
     if(ref.bookOnly){
       main.insertAdjacentHTML("afterbegin",
